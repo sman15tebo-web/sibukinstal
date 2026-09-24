@@ -49,6 +49,11 @@ async function restoreSession(res) {
     $('#loginPage').addClass('hidden');
     $('#appPage').removeClass('hidden');
 
+    // Tampilkan desktop toolbar HANYA saat login (jika di Desktop)
+    if (window.electronAPI) {
+        $('#desktop-toolbar').css('display', 'flex');
+    }
+
     $('#uName').text(res.nama);
     $('#uInit').text(res.nama.charAt(0));
     $('#uRole').text(res.role.toUpperCase());
@@ -169,6 +174,12 @@ function logout() {
             localStorage.removeItem(`simisterbin_session_${tenantId}`); // HAPUS SESI SAAT LOGOUT
             $('#appPage').addClass('hidden');
             $('#loginPage').removeClass('hidden').addClass('animate__animated animate__fadeIn');
+            
+            // Sembunyikan kembali desktop toolbar saat logout
+            if (window.electronAPI) {
+                $('#desktop-toolbar').css('display', 'none');
+            }
+
             $('#u').val(''); $('#p').val('');
             globalSiswa = [];
         }
