@@ -4,9 +4,9 @@
 
 // 1. Buat "Buku Alamat" untuk masing-masing sekolah
 const tenantConfig = {
-    "sman15tebo": "https://script.google.com/macros/s/AKfycbw6sbeF7xgjy1EvXxSFDvgNHdfcEZs6Hj2y_iZ1kxPpHOj9XqQzL6GaXgyqI2RlonIl/exec",
+    "demo": "https://script.google.com/macros/s/AKfycbwSWMTTwosVTO2RtGVib_pWG5wzvD4mhwr7Lu93iRSNKQ2HiqYejt6kp1EXqdatBwyW/exec",
     "smkn1kotaternate": "https://script.google.com/macros/s/AKfycbyvOn_OmvjUl2oiagTwzIuEFBYltLv9bancqjWXAVH594jtPUvHnGMPhjCgw5HL13mT/exec",
-    "sman15tebo2026": "https://script.google.com/macros/s/AKfycbw6sbeF7xgjy1EvXxSFDvgNHdfcEZs6Hj2y_iZ1kxPpHOj9XqQzL6GaXgyqI2RlonIl/exec",
+    "sman15tebo": "https://script.google.com/macros/s/AKfycbwSWMTTwosVTO2RtGVib_pWG5wzvD4mhwr7Lu93iRSNKQ2HiqYejt6kp1EXqdatBwyW/exec",
     "smk2": "https://script.google.com/macros/s/ID_API_SEKOLAH_3/exec"
     // Tambahkan sekolah lain di sini sesuai kebutuhan
 };
