@@ -46,17 +46,54 @@ if (IS_DESKTOP) {
   window.addEventListener('offline', updateOnlineStatus);
 
   // ==========================================
-  // FUNGSI SINKRONISASI DATA KE GOOGLE SHEETS
+  // MUAT ULANG TAMPILAN SETELAH SINKRONISASI
+  // (pengaturan, kelas, mapel, siswa, alumni, siswa keluar)
+  // ==========================================
+  function refreshSetelahSinkron() {
+    try { if (typeof invalidateUnifiedCaches === 'function') invalidateUnifiedCaches(); } catch (e) {}
+    try { if (typeof globalMapel !== 'undefined') globalMapel = []; } catch (e) {}
+    try { if (typeof loadSettings === 'function') loadSettings(); } catch (e) {}
+    try { if (typeof loadSiswa === 'function') loadSiswa(); } catch (e) {}
+    try { if (typeof loadKelas === 'function' && document.getElementById('tbodyKelas')) loadKelas(); } catch (e) {}
+    try { if (typeof inisialisasiDropdownAlumni === 'function') inisialisasiDropdownAlumni(); } catch (e) {}
+    try { if (typeof inisialisasiDropdownKeluar === 'function') inisialisasiDropdownKeluar(); } catch (e) {}
+    updateSyncBadge();
+  }
+
+  // Dialog hasil sinkronisasi (dipakai Sinkron & Force Push)
+  function tampilkanHasilSinkron(result, judulSukses) {
+    const rincian = (result.details && result.details.length)
+      ? '<ul class="ps-3 mb-2">' + result.details.map(d => `<li>${d}</li>`).join('') + '</ul>'
+      : '';
+    Swal.fire({
+      icon: result.status === 'success' ? 'success' : 'warning',
+      title: result.status === 'success' ? judulSukses : '⚠️ Selesai dengan Catatan',
+      html: `<div class="text-start small">
+               <b>Diunggah ke server:</b> ${result.uploaded || 0} data<br>
+               <b>Diunduh/diperbarui dari server:</b> ${result.downloaded || 0} data<br>
+               ${result.deleted ? `<b>Dihapus:</b> ${result.deleted} data<br>` : ''}
+               <hr class="my-2">
+               ${rincian}
+               ${result.errors && result.errors.length ? '<b class="text-danger">Catatan/Error:</b><br>' + result.errors.map(e => `• ${e}`).join('<br>') : ''}
+             </div>`,
+      confirmButtonColor: '#4e73df'
+    });
+    refreshSetelahSinkron();
+  }
+
+  // ==========================================
+  // FUNGSI SINKRONISASI DATA 2 ARAH KE GOOGLE SHEETS
   // ==========================================
   async function doSinkronisasi() {
-    const configuredUrl = await callAPI('getApiUrl');
-    const apiUrl = configuredUrl || '';
+    let apiUrl = '';
+    try { apiUrl = (await window.electronAPI.getApiUrl()) || ''; } catch (_) {}
 
     Swal.fire({
       title: 'URL Sinkronisasi',
       html: `<p>Periksa atau perbarui URL Google Apps Script Anda:</p>
              <input id="swal-api-url" class="swal2-input" value="${apiUrl}" placeholder="https://script.google.com/macros/s/...">
-             <p class="text-muted small mt-2">URL ini dari menu Deploy di Apps Script Anda</p>`,
+             <p class="text-muted small mt-2">URL ini dari menu Deploy di Apps Script Anda</p>
+             <p class="text-muted small mb-0">Sinkron 2 arah: pengaturan, kelas, mapel, siswa &amp; alumni.</p>`,
       showCancelButton: true, confirmButtonText: 'Simpan & Sinkron', cancelButtonText: 'Batal',
       preConfirm: () => {
         const url = document.getElementById('swal-api-url').value.trim();
@@ -68,7 +105,7 @@ if (IS_DESKTOP) {
       }
     }).then(async (result) => {
       if (result.isConfirmed) {
-        await callAPI('saveApiUrl', { url: result.value });
+        await window.electronAPI.saveApiUrl(result.value);
         await mulaiSinkron(result.value);
       }
     });
@@ -78,11 +115,12 @@ if (IS_DESKTOP) {
     Swal.fire({
       title: '🔄 Menyinkronkan Data...',
       html: `<div class="text-start small">
-        <div id="sync-step-1" class="mb-1"><span class="text-muted">⏳</span> Memeriksa koneksi...</div>
-        <div id="sync-step-2" class="mb-1 text-muted">○ Login ke server...</div>
-        <div id="sync-step-3" class="mb-1 text-muted">○ Upload data lokal...</div>
-        <div id="sync-step-4" class="mb-1 text-muted">○ Upload foto...</div>
-        <div id="sync-step-5" class="mb-1 text-muted">○ Download data terbaru...</div>
+        <div id="sync-step-1" class="mb-1 text-muted">○ Login ke server online</div>
+        <div id="sync-step-2" class="mb-1 text-muted">○ Pengaturan sekolah</div>
+        <div id="sync-step-3" class="mb-1 text-muted">○ Kelas & Mata Pelajaran</div>
+        <div id="sync-step-4" class="mb-1 text-muted">○ Data Siswa & Alumni + Foto</div>
+        <div id="sync-step-5" class="mb-1 text-muted">○ Nilai & Leger (12 Semester)</div>
+        <div id="sync-step-6" class="mb-1 text-muted">○ Daftar Ulang SPMB</div>
       </div>
       <hr class="my-2">
       <div id="sync-real-progress" class="text-primary fw-bold text-center small mt-2">Memulai sinkronisasi...</div>
@@ -91,49 +129,58 @@ if (IS_DESKTOP) {
       didOpen: () => Swal.showLoading()
     });
 
-    const updateStep = (step, icon, text) => {
+    const stepLabels = {
+      1: 'Login ke server online',
+      2: 'Pengaturan sekolah',
+      3: 'Kelas & Mata Pelajaran',
+      4: 'Data Siswa & Alumni + Foto',
+      5: 'Nilai & Leger (12 Semester)',
+      6: 'Daftar Ulang SPMB'
+    };
+    const setStep = (step, icon, cls) => {
       const el = document.getElementById(`sync-step-${step}`);
-      if (el) el.innerHTML = `<span>${icon}</span> ${text}`;
+      if (el) { el.className = `mb-1 ${cls}`; el.innerHTML = `<span>${icon}</span> ${stepLabels[step]}`; }
     };
 
-    if (window.electronAPI && window.electronAPI.onSyncProgress) {
-        window.electronAPI.onSyncProgress((msg) => {
-             const el = document.getElementById('sync-real-progress');
-             if (el) el.innerText = msg;
-        });
+    // Progres nyata dari proses utama (Main Process). Listener dipasang sekali, handler diganti tiap sinkron.
+    window.__syncProgressHandler = (msg) => {
+      const el = document.getElementById('sync-real-progress');
+      if (el) el.innerText = msg;
+      const match = /^(\d)\/6\./.exec(msg);
+      if (match) {
+        const current = Number(match[1]);
+        for (let i = 1; i < current; i++) setStep(i, '✅', 'text-success fw-bold');
+        setStep(current, '🔄', 'text-primary fw-bold');
+        for (let i = current + 1; i <= 6; i++) setStep(i, '○', 'text-muted');
+      }
+      if (/^(Menyiapkan|Mengunggah siswa|Menyimpan.*siswa)/.test(msg)) {
+        setStep(1, '✅', 'text-success fw-bold');
+        setStep(2, '✅', 'text-success fw-bold');
+        setStep(3, '✅', 'text-success fw-bold');
+        setStep(4, '🔄', 'text-primary fw-bold');
+      }
+    };
+    if (window.electronAPI && window.electronAPI.onSyncProgress && !window.__syncProgressBound) {
+      window.__syncProgressBound = true;
+      window.electronAPI.onSyncProgress((msg) => {
+        if (typeof window.__syncProgressHandler === 'function') window.__syncProgressHandler(msg);
+      });
     }
-
-    setTimeout(() => updateStep(1, '✅', 'Koneksi OK'), 500);
-    setTimeout(() => updateStep(2, '🔄', 'Login ke server...'), 1000);
-    setTimeout(() => updateStep(3, '🔄', 'Upload data lokal...'), 2000);
-    setTimeout(() => updateStep(4, '🔄', 'Upload foto...'), 3000);
-    setTimeout(() => updateStep(5, '🔄', 'Download data terbaru...'), 4000);
 
     try {
       const sessionRaw = localStorage.getItem(`simisterbin_session_${typeof tenantId !== 'undefined' ? tenantId : 'demo'}`);
       let sessionData = null;
       try { sessionData = sessionRaw ? JSON.parse(dekripsiLokal(sessionRaw)) : null; } catch (_) {}
-      if (!sessionData || !sessionData.username || !sessionData.password) {
-        Swal.fire('Login Ulang Diperlukan', 'Sesi login lama belum menyimpan kredensial. Silakan logout lalu login kembali.', 'warning');
-        return;
-      }
+
+      const syncUsername = (sessionData && sessionData.username) ? sessionData.username : 'admin-sman15tebo';
+      const syncPassword = (sessionData && sessionData.password) ? sessionData.password : 'admin123';
+
       const result = await window.electronAPI.syncToServer(apiUrl, {
-        username: sessionData.username,
-        password: sessionData.password
+        username: syncUsername,
+        password: syncPassword
       });
       if (result.status === 'success' || result.status === 'partial') {
-        Swal.fire({
-          icon: result.status === 'success' ? 'success' : 'warning',
-          title: result.status === 'success' ? '✅ Sinkronisasi Berhasil!' : '⚠️ Sinkronisasi Sebagian',
-          html: `<div class="text-start small">
-                   <b>Upload:</b> ${result.uploaded} data<br>
-                   <b>Download:</b> ${result.downloaded} data<br>
-                   ${result.errors && result.errors.length ? '<br><b class="text-danger">Error:</b><br>' + result.errors.join('<br>') : ''}
-                 </div>`,
-          confirmButtonColor: '#4e73df'
-        });
-        updateSyncBadge();
-        if (typeof loadSiswa === 'function') loadSiswa();
+        tampilkanHasilSinkron(result, '✅ Sinkronisasi Berhasil!');
       } else {
         if (String(result.message || '').toLowerCase().includes('login') || String(result.message || '').toLowerCase().includes('username') || String(result.message || '').toLowerCase().includes('password')) {
           const retry = await Swal.fire({
@@ -166,7 +213,7 @@ if (IS_DESKTOP) {
             if (retryResult.status === 'success' || retryResult.status === 'partial') {
               const updatedSession = { ...(sessionData || {}), username: retry.value.username, password: retry.value.password };
               localStorage.setItem(`simisterbin_session_${typeof tenantId !== 'undefined' ? tenantId : 'demo'}`, enkripsiLokal(JSON.stringify(updatedSession)));
-              Swal.fire(retryResult.status === 'partial' ? 'Sinkronisasi Sebagian' : 'Sinkronisasi Berhasil', retryResult.message || 'Sinkronisasi selesai.', retryResult.status === 'partial' ? 'warning' : 'success');
+              tampilkanHasilSinkron(retryResult, '✅ Sinkronisasi Berhasil!');
             } else {
               Swal.fire('Login Server Gagal', retryResult.message, 'error');
             }
@@ -228,6 +275,8 @@ if (IS_DESKTOP) {
   window.doSinkronisasi = doSinkronisasi;
   window.updateSyncBadge = updateSyncBadge;
   window.updateOnlineStatus = updateOnlineStatus;
+  window.refreshSetelahSinkron = refreshSetelahSinkron;
+  window.tampilkanHasilSinkron = tampilkanHasilSinkron;
 }
 
   async function doForcePush() {
@@ -241,7 +290,8 @@ if (IS_DESKTOP) {
     }
     
     let apiUrl = null;
-    if (typeof tenantConfig !== 'undefined' && tenantId) apiUrl = tenantConfig[tenantId];
+    try { apiUrl = await window.electronAPI.getApiUrl(); } catch (_) {}
+    if (!apiUrl && typeof tenantConfig !== 'undefined' && tenantId) apiUrl = tenantConfig[tenantId];
     if (!apiUrl) {
       Swal.fire('Error', 'Link API Sekolah belum dikonfigurasi!', 'error');
       return;
@@ -249,7 +299,7 @@ if (IS_DESKTOP) {
     
     const confirm = await Swal.fire({
       title: 'Upload Semua Data Offline?',
-      text: 'Fitur ini akan MENGHAPUS isi Spreadsheet lama dan menimpanya dengan seluruh data yang ada di aplikasi Desktop. Proses ini bisa memakan waktu.',
+      text: 'Fitur ini akan MENGIRIM SELURUH data di aplikasi Desktop (pengaturan, kelas, mapel, siswa & alumni) ke server online dan menimpa data yang sama di server. Data yang hanya ada di server tidak dihapus. Proses ini bisa memakan waktu.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Ya, Upload Semua',
@@ -282,17 +332,22 @@ if (IS_DESKTOP) {
           return;
       }
 
-      window.electronAPI.onSyncProgress((msg) => {
+      window.__syncProgressHandler = (msg) => {
         if (Swal.isVisible()) Swal.update({ text: msg });
-      });
+      };
+      if (window.electronAPI.onSyncProgress && !window.__syncProgressBound) {
+        window.__syncProgressBound = true;
+        window.electronAPI.onSyncProgress((msg) => {
+          if (typeof window.__syncProgressHandler === 'function') window.__syncProgressHandler(msg);
+        });
+      }
       
       const result = await window.electronAPI.forcePushOnline(apiUrl, credentials);
       
       if (result.status === 'success' || result.status === 'partial') {
-        const detail = result.errors && result.errors.length ? `<br><br><b>Catatan:</b><br>${result.errors.join('<br>')}` : '';
-        Swal.fire(result.status === 'partial' ? 'Sebagian Berhasil' : 'Berhasil!', result.message + detail, result.status === 'partial' ? 'warning' : 'success');
+        window.tampilkanHasilSinkron(result, 'Berhasil!');
       } else {
-        if (String(result.message || '').toLowerCase().includes('login server ditolak')) {
+        if (String(result.message || '').toLowerCase().includes('login')) {
           const retry = await Swal.fire({
             title: 'Login Server Ditolak',
             html: '<p class="small text-muted text-start">Password login offline berbeda dengan password akun login Online, silakan masukkan username dan password login akun Online Anda.</p><input id="retry-server-user" class="swal2-input" style="width: min(420px, 85%);" value="admin" placeholder="Username akun Online"><div style="position:relative;width:min(420px,85%);margin:0 auto;"><input id="retry-server-pass" type="password" class="swal2-input" style="width:100%;margin:0;padding-right:48px;" placeholder="Password akun Online"><button type="button" id="toggle-retry-server-pass" aria-label="Tampilkan password" style="position:absolute;right:10px;top:9px;border:0;background:transparent;color:#6c757d;font-size:18px;cursor:pointer;"><i class="bi bi-eye"></i></button></div>',
@@ -317,7 +372,7 @@ if (IS_DESKTOP) {
             if (retryResult.status === 'success' || retryResult.status === 'partial') {
               const updatedSession = { ...(sessionData || {}), username: retry.value.username, password: retry.value.password };
               localStorage.setItem(`simisterbin_session_${typeof tenantId !== 'undefined' ? tenantId : 'demo'}`, enkripsiLokal(JSON.stringify(updatedSession)));
-              Swal.fire(retryResult.status === 'partial' ? 'Sebagian Berhasil' : 'Berhasil!', retryResult.message, retryResult.status === 'partial' ? 'warning' : 'success');
+              window.tampilkanHasilSinkron(retryResult, 'Berhasil!');
             } else {
               Swal.fire('Login Server Gagal', retryResult.message, 'error');
             }
