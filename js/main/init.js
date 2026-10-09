@@ -463,7 +463,9 @@ function updateAccount(e, role) {
 
 async function loadSettings() {
     return callAPI('getSettings').then(async s => {
+        if (!s || typeof s !== 'object') return;
         globalConf = s;
+        ['logo_instansi', 'logo_sekolah', 'background_landing', 'background_login', 'background_kartu', 'background_belakang'].forEach(id => $('#' + id).data('deleted', false));
 
         if (s.theme_color_1) document.documentElement.style.setProperty('--theme-color-1', s.theme_color_1);
         else document.documentElement.style.setProperty('--theme-color-1', s.theme_color || '#4e73df');
@@ -486,7 +488,8 @@ async function loadSettings() {
         if (s.web_sekolah) { $('#dashWeb').text(s.web_sekolah); } else { $('#dashWeb').text('-'); }
         if (s.email_sekolah) { $('#dashEmail').text(s.email_sekolah); } else { $('#dashEmail').text('-'); }
         if (s.telp_sekolah) { $('#dashTelp').text(s.telp_sekolah); } else { $('#dashTelp').text('-'); }
-        $('#setKepsek').val(s.nama_kepsek); $('#setNip').val(s.nip_kepsek); 
+        $('#setKepsek').val(s.nama_kepsek || s.kepala_sekolah || '');
+        $('#setNip').val(s.nip_kepsek || ''); 
         $('#setTheme1').val(s.theme_color_1 || s.theme_color || '#4e73df');
         $('#setTheme2').val(s.theme_color_2 || '#224abe');
         $('#setTheme3').val(s.theme_color_3 || '#1a202c');
@@ -504,10 +507,10 @@ async function loadSettings() {
         const finalWakaU = wakaU || (sessionData && sessionData.role === 'wakakurikulum' ? sessionData.username : '');
         $('#guruUser').val(finalWakaU).attr('readonly', true).attr('title', 'Username Waka (Readonly)');
 
-        // --- OPTIMIZATION: Ambil gambar satu per satu (sekuensial) agar server GAS tidak error karena overload request ---
+        // --- Pemuatan Gambar (Direct Base64 Data URL atau Fallback Drive ID) ---
         if (s.logo_instansi) {
             $('#logo_instansi').val(s.logo_instansi);
-            let b = await callAPI('getImage', { id: s.logo_instansi });
+            let b = String(s.logo_instansi).startsWith('data:') ? s.logo_instansi : await callAPI('getImage', { id: s.logo_instansi });
             if (b) {
                 $('#loginLogoInstansi, #prevLogoInstansi, #dashLogoInstansi, #headerLogoInstansi').attr('src', b).removeClass('hidden');
             }
@@ -515,7 +518,7 @@ async function loadSettings() {
         
         if (s.logo_sekolah) {
             $('#logo_sekolah').val(s.logo_sekolah);
-            let b = await callAPI('getImage', { id: s.logo_sekolah });
+            let b = String(s.logo_sekolah).startsWith('data:') ? s.logo_sekolah : await callAPI('getImage', { id: s.logo_sekolah });
             if (b) {
                 $('#loginLogoSekolah, #prevLogoSekolah, #dashLogoSekolah, #headerLogoSekolah').attr('src', b).removeClass('hidden');
             }
@@ -527,7 +530,7 @@ async function loadSettings() {
 
         if (s.background_landing) {
             $('#background_landing').val(s.background_landing);
-            let b = await callAPI('getImage', { id: s.background_landing });
+            let b = String(s.background_landing).startsWith('data:') ? s.background_landing : await callAPI('getImage', { id: s.background_landing });
             if (b) {
                 $('#prev_bg_landing').attr('src', b).removeClass('hidden'); 
                 bgLandingUrl = 'url(' + b + ')'; 
@@ -537,7 +540,7 @@ async function loadSettings() {
 
         if (s.background_login) {
             $('#background_login').val(s.background_login);
-            let b = await callAPI('getImage', { id: s.background_login });
+            let b = String(s.background_login).startsWith('data:') ? s.background_login : await callAPI('getImage', { id: s.background_login });
             if (b) {
                 $('#prev_bg_login').attr('src', b).removeClass('hidden'); 
                 bgLoginUrl = 'url(' + b + ')'; 
@@ -546,14 +549,14 @@ async function loadSettings() {
         }
         if (s.background_kartu) {
             $('#background_kartu').val(s.background_kartu);
-            let b = await callAPI('getImage', { id: s.background_kartu });
+            let b = String(s.background_kartu).startsWith('data:') ? s.background_kartu : await callAPI('getImage', { id: s.background_kartu });
             if (b) {
                 $('#prev_bg_kartu').attr('src', b).removeClass('hidden'); 
             }
         }
         if (s.background_belakang) {
             $('#background_belakang').val(s.background_belakang);
-            let b = await callAPI('getImage', { id: s.background_belakang });
+            let b = String(s.background_belakang).startsWith('data:') ? s.background_belakang : await callAPI('getImage', { id: s.background_belakang });
             if (b) {
                 $('#prev_bg_belakang').attr('src', b).removeClass('hidden'); 
             }
@@ -562,8 +565,22 @@ async function loadSettings() {
             $('#boxLinkExec').removeClass('hidden');
             $('#boxForcePush').removeClass('hidden');
             callAPI('getOfflineConfig').then(res => {
-                if (res && res.status === 'success' && res.data && res.data.linkExec) {
-                    $('#inputLinkExec').val(res.data.linkExec).attr('readonly', true);
+                let gasLink = '';
+                if (res) {
+                    if (typeof res === 'string') gasLink = res;
+                    else if (res.gasUrl) gasLink = res.gasUrl;
+                    else if (res.linkExec) gasLink = res.linkExec;
+                    else if (res.data) gasLink = res.data.gasUrl || res.data.linkExec || (typeof res.data === 'string' ? res.data : '');
+                }
+                if (!gasLink && typeof window.APP_CONFIG !== 'undefined' && (window.APP_CONFIG.gasUrl || window.APP_CONFIG.linkExec)) {
+                    gasLink = window.APP_CONFIG.gasUrl || window.APP_CONFIG.linkExec;
+                }
+                if (gasLink) {
+                    $('#inputLinkExec').val(gasLink).attr('readonly', true);
+                }
+            }).catch(() => {
+                if (typeof window.APP_CONFIG !== 'undefined' && window.APP_CONFIG.gasUrl) {
+                    $('#inputLinkExec').val(window.APP_CONFIG.gasUrl).attr('readonly', true);
                 }
             });
         }
@@ -589,7 +606,10 @@ async function loadSettings() {
 }
 
 function copyLinkExec() {
-    const val = $('#inputLinkExec').val();
+    let val = $('#inputLinkExec').val();
+    if (!val && typeof window.APP_CONFIG !== 'undefined') {
+        val = window.APP_CONFIG.gasUrl || window.APP_CONFIG.linkExec;
+    }
     if (val) {
         navigator.clipboard.writeText(val).then(() => {
             showCoolAlert('Tersalin', 'Link Exec berhasil disalin ke clipboard.', 'success');
@@ -597,17 +617,26 @@ function copyLinkExec() {
     }
 }
 
+
+function getValOrGlobal(inputId, key) {
+    const el = $('#' + inputId);
+    if (el.data('deleted')) return '';
+    const v = el.val();
+    if (v) return v;
+    return (globalConf && globalConf[key]) ? globalConf[key] : '';
+}
+
 function saveSettings(e) {
     e.preventDefault();
     $('#loader').removeClass('hidden');
     const d = {
-        nama_instansi: $('#setInstansi').val(),
-        nama_sekolah: $('#setNama').val(),
-        alamat_sekolah: $('#setAlamat').val(),
-        nama_kepsek: $('#setKepsek').val(),
-        nip_kepsek: $('#setNip').val(),
-        logo_instansi: $('#logo_instansi').val(),
-        logo_sekolah: $('#logo_sekolah').val(),
+        nama_instansi: $('#setInstansi').val() || (globalConf ? globalConf.nama_instansi : ''),
+        nama_sekolah: $('#setNama').val() || (globalConf ? globalConf.nama_sekolah : ''),
+        alamat_sekolah: $('#setAlamat').val() || (globalConf ? globalConf.alamat_sekolah : ''),
+        nama_kepsek: $('#setKepsek').val() || (globalConf ? globalConf.nama_kepsek : ''),
+        nip_kepsek: $('#setNip').val() || (globalConf ? globalConf.nip_kepsek : ''),
+        logo_instansi: getValOrGlobal('logo_instansi', 'logo_instansi'),
+        logo_sekolah: getValOrGlobal('logo_sekolah', 'logo_sekolah'),
         theme_color_1: $('#setTheme1').val(),
         theme_color_2: $('#setTheme2').val(),
         theme_color_3: $('#setTheme3').val(),
@@ -615,10 +644,10 @@ function saveSettings(e) {
         telp_sekolah: $('#setTelp').val(),
         email_sekolah: $('#setEmail').val(),
         web_sekolah: $('#setWeb').val(),
-        background_landing: $('#background_landing').val(),
-        background_login: $('#background_login').val(),
-        background_kartu: $('#background_kartu').val(),
-        background_belakang: $('#background_belakang').val(),
+        background_landing: getValOrGlobal('background_landing', 'background_landing'),
+        background_login: getValOrGlobal('background_login', 'background_login'),
+        background_kartu: getValOrGlobal('background_kartu', 'background_kartu'),
+        background_belakang: getValOrGlobal('background_belakang', 'background_belakang'),
     };
     callAPI('saveSettings', d).then(r => {
         $('#loader').addClass('hidden');
@@ -665,8 +694,8 @@ function hapusGambarSettings(inputId, imgId) {
         confirmButtonText: 'Ya, Hapus!'
     }).then((result) => {
         if (result.isConfirmed) {
-            // 1. Kosongkan data di memory
-            $('#' + inputId).val('');
+            // 1. Kosongkan data di memory & tandai telah dihapus secara eksplisit
+            $('#' + inputId).val('').data('deleted', true);
             // 2. Sembunyikan preview gambar
             $('#' + imgId).attr('src', '').addClass('hidden');
             // 3. Reset kolom Pilih File agar kosong kembali
@@ -731,14 +760,23 @@ $('#btnCrop').click(() => {
 
     const base64 = canvas.toDataURL(mimeType, quality);
 
-    bootstrap.Modal.getInstance(document.getElementById('mdlCrop')).hide();
-    $('#loader').removeClass('hidden');
+    if (isLogo || isBackground) {
+        // Logo & background pengaturan disimpan langsung sebagai string Base64 agar dapat dibaca di versi offline & online
+        $('#loader').addClass('hidden');
+        if (cropTarget === 'logo_instansi') { $('#logo_instansi').val(base64); $('#prevLogoInstansi').attr('src', base64).removeClass('hidden'); }
+        if (cropTarget === 'logo_sekolah') { $('#logo_sekolah').val(base64); $('#prevLogoSekolah').attr('src', base64).removeClass('hidden'); }
+        if (cropTarget === 'background_landing') { $('#background_landing').val(base64); $('#prev_bg_landing').attr('src', base64).removeClass('hidden'); bgLandingUrl = 'url(' + base64 + ')'; applyLoginPageBackground(); }
+        if (cropTarget === 'background_login') { $('#background_login').val(base64); $('#prev_bg_login').attr('src', base64).removeClass('hidden'); bgLoginUrl = 'url(' + base64 + ')'; applyLoginPageBackground(); }
+        if (cropTarget === 'background_kartu') { $('#background_kartu').val(base64); $('#prev_bg_kartu').attr('src', base64).removeClass('hidden'); }
+        if (cropTarget === 'background_belakang') { $('#background_belakang').val(base64); $('#prev_bg_belakang').attr('src', base64).removeClass('hidden'); }
+        return;
+    }
 
     // ==========================================
-    // LOGIKA PENAMAAN FILE OTOMATIS
+    // LOGIKA PENAMAAN FILE OTOMATIS (FOTO SISWA)
     // ==========================================
     let namaFile = "img_" + Date.now(); // Nama bawaan jika gagal deteksi
-    let ekstensi = isLogo ? ".png" : ".jpg";
+    let ekstensi = ".jpg";
 
     if (cropTarget === 'du_masuk') {
         // Tarik data dari form Daftar Ulang
@@ -755,15 +793,12 @@ $('#btnCrop').click(() => {
         let cleanNama = nama.replace(/[^a-zA-Z0-9]/g, "_");
         let ket = cropTarget === 'masuk' ? 'MASUK' : 'KELUAR';
         namaFile = `${nisn}_PASFOTO_${ket}_${cleanNama}${ekstensi}`;
-
-    } else if (isLogo) {
-        namaFile = `${cropTarget}_${Date.now()}${ekstensi}`;
     }
     // ==========================================
 
     // PENGARAHAN FOLDER DRIVE:
     // Jika targetnya 'du_masuk' (Foto Daftar Ulang), arahkan ke folder 'spmb_foto'
-    const t = isLogo ? 'logo' : (cropTarget === 'du_masuk' ? 'spmb_foto' : 'foto');
+    const t = cropTarget === 'du_masuk' ? 'spmb_foto' : 'foto';
 
     // Kirim beserta nama file yang sudah diracik
     callAPI('uploadBase64', { base64: base64, filename: namaFile, folderType: t }).then(res => {
@@ -780,13 +815,6 @@ $('#btnCrop').click(() => {
                     $('#du_id_foto_masuk').val(imgId);
                     $('#du_prev_masuk').attr('src', b64).removeClass('hidden');
                 }
-
-                if (cropTarget === 'logo_instansi') { $('#logo_instansi').val(imgId); $('#prevLogoInstansi').attr('src', b64).removeClass('hidden'); }
-                if (cropTarget === 'logo_sekolah') { $('#logo_sekolah').val(imgId); $('#prevLogoSekolah').attr('src', b64).removeClass('hidden'); }
-                if (cropTarget === 'background_landing') { $('#background_landing').val(imgId); $('#prev_bg_landing').attr('src', b64).removeClass('hidden'); bgLandingUrl = 'url(' + b64 + ')'; applyLoginPageBackground(); }
-                if (cropTarget === 'background_login') { $('#background_login').val(imgId); $('#prev_bg_login').attr('src', b64).removeClass('hidden'); bgLoginUrl = 'url(' + b64 + ')'; applyLoginPageBackground(); }
-                if (cropTarget === 'background_kartu') { $('#background_kartu').val(imgId); $('#prev_bg_kartu').attr('src', b64).removeClass('hidden'); }
-                if (cropTarget === 'background_belakang') { $('#background_belakang').val(imgId); $('#prev_bg_belakang').attr('src', b64).removeClass('hidden'); }
             });
         } else {
             $('#loader').addClass('hidden');
