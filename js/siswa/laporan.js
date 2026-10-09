@@ -142,6 +142,7 @@ document.addEventListener('HtmlIncludesLoaded', function() {
             return;
         }
         if(target === '#tabLapSiswa' || target === '#tabLapLeger') {
+            if (target === '#tabLapLeger') lapRataNilai = null; // muat ulang agar selalu terbaru
             renderLapPreview();
         }
     });
@@ -195,9 +196,50 @@ function getFilteredDataLaporan() {
     return data;
 }
 
+// ==========================================
+// RATA-RATA NILAI UNTUK TAB LEGER
+// Rata-rata = rata-rata semua nilai Pengetahuan & Keterampilan (semua semester)
+// ==========================================
+let lapRataNilai = null;
+let lapRataNilaiLoading = false;
+
+function muatRataNilai(force) {
+    if (lapRataNilaiLoading) return Promise.resolve();
+    if (lapRataNilai && !force) return Promise.resolve();
+    lapRataNilaiLoading = true;
+    return callAPI('getRataRataNilai').then(res => {
+        lapRataNilai = (res && res.status === 'success' && res.data) ? res.data : {};
+    }).catch(() => {
+        lapRataNilai = {};
+    }).then(() => {
+        lapRataNilaiLoading = false;
+    });
+}
+
+function lapNilaiInfo(nis) {
+    return lapRataNilai ? lapRataNilai[String(nis || '').trim()] : null;
+}
+
+function formatRataNilai(v) {
+    return Number(v).toFixed(2).replace('.', ',');
+}
+
+function lapNilaiText(nis) {
+    const a = lapNilaiInfo(nis);
+    return a ? formatRataNilai(a.avg) : 'Belum Diinput';
+}
+
+function lapNilaiCell(nis) {
+    if (lapRataNilai === null) return '<td class="text-muted small">Memuat...</td>';
+    const a = lapNilaiInfo(nis);
+    if (!a) return '<td class="text-muted fst-italic">Belum Diinput</td>';
+    return `<td class="fw-bold text-success" title="Pengetahuan: ${formatRataNilai(a.p)} | Keterampilan: ${formatRataNilai(a.k)} | ${a.n} nilai">${formatRataNilai(a.avg)}</td>`;
+}
+
 function renderLapPreview() {
     const data = getFilteredDataLaporan();
     const isLeger = $('#tabLapLeger').hasClass('active') || $('#tabLapLeger').hasClass('show');
+    if (isLeger && lapRataNilai === null && !lapRataNilaiLoading) muatRataNilai().then(() => renderLapPreview());
 
     let htmlSiswa = '';
     let htmlLeger = '';
@@ -257,7 +299,7 @@ function renderLapPreview() {
         `;
 
         htmlSiswa += `<tr>${barisBase}<td><button class="btn btn-sm btn-secondary me-1" onclick="reviewSiswa('${nis}')" title="Lihat"><i class="bi bi-eye"></i></button><button class="btn btn-sm btn-info text-white" onclick="cetakPDF('${nis}')" title="Cetak"><i class="bi bi-printer"></i></button></td></tr>`;
-        htmlLeger += `<tr>${barisBase}<td class="text-muted fst-italic">Belum Diinput</td></tr>`;
+        htmlLeger += `<tr>${barisBase}${lapNilaiCell(s[0])}</tr>`;
     });
 
     $('#tbodyLapPreviewSiswa').html(htmlSiswa);
@@ -293,6 +335,7 @@ async function unduhLaporanExcel() {
 
     $('#loader').removeClass('hidden');
     $('#loaderText').text('Menyiapkan file Excel...');
+    if (isLeger) await muatRataNilai(true);
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'SiBuk InSTal';
@@ -358,7 +401,7 @@ async function unduhLaporanExcel() {
             kelasStatus = s[32] ? `${s[31]} - ${s[32]}` : s[31];
         }
 
-        let nilaiKeterangan = isLeger ? 'Belum Diinput' : (s[31] || '-');
+        let nilaiKeterangan = isLeger ? lapNilaiText(s[0]) : (s[31] || '-');
         
         let row = sheet.addRow([
             idx + 1, 
