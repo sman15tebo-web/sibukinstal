@@ -49,33 +49,71 @@ function dekripsiLokal(b64) {
 }
 
 
-// 2. Baca ID dari URL (contoh: https://namamu.github.io/simisterbin/?id=demo)
+// 2. Deteksi Tenant & Backend API Secara Dinamis (Support ?id= dan ?exec=)
 const urlParams = new URLSearchParams(window.location.search);
 let tenantId = urlParams.get('id');
-
-// PERBAIKAN: Jika tidak ada id di link, otomatis pakai 'demo' agar aplikasi tetap bisa jalan
-if (!tenantId) {
-    tenantId = 'demo';
-}
-
 let API_URL = "";
 
-// 3. Validasi: Pastikan ID ada dan terdaftar di tenantConfig
-if (tenantId && tenantConfig[tenantId]) {
-    API_URL = tenantConfig[tenantId];
-} else {
-    // Jika ID salah atau tidak ada, hancurkan halaman dan tampilkan error
+// Prioritas 1: Parameter URL ?exec=...
+const paramExec = urlParams.get('exec');
+if (paramExec && paramExec.startsWith('http')) {
+    API_URL = paramExec;
+    localStorage.setItem('sibukinstal_custom_api_url', paramExec);
+}
+
+// Prioritas 2: Link Exec Kustom dari Pengaturan Sekolah
+if (!API_URL) {
+    const customUrl = localStorage.getItem('sibukinstal_custom_api_url') || localStorage.getItem('customSyncLink');
+    if (customUrl && customUrl.startsWith('http')) {
+        API_URL = customUrl;
+    }
+}
+
+// Prioritas 3: Parameter ?id=...
+if (!API_URL && tenantId) {
+    const cleanId = tenantId.trim().toLowerCase();
+    if (tenantConfig[cleanId]) {
+        API_URL = tenantConfig[cleanId];
+        localStorage.setItem('sibukinstal_tenant_id', cleanId);
+    }
+}
+
+// Prioritas 4: Deteksi dari Memori Tenant Terakhir / Nama Sekolah
+if (!API_URL) {
+    const savedTenant = localStorage.getItem('sibukinstal_tenant_id');
+    if (savedTenant && tenantConfig[savedTenant]) {
+        API_URL = tenantConfig[savedTenant];
+    } else {
+        try {
+            const conf = JSON.parse(localStorage.getItem('globalConf') || localStorage.getItem('appSettings') || '{}');
+            const schoolName = conf.namaSekolah || conf.nama_sekolah || '';
+            if (schoolName) {
+                const slug = schoolName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (tenantConfig[slug]) {
+                    API_URL = tenantConfig[slug];
+                    localStorage.setItem('sibukinstal_tenant_id', slug);
+                }
+            }
+        } catch (e) { }
+    }
+}
+
+// Prioritas 5: Fallback Default
+if (!API_URL) {
+    API_URL = tenantConfig[tenantId] || tenantConfig["demo"] || Object.values(tenantConfig)[0] || "";
+}
+
+if (!API_URL) {
     document.addEventListener("DOMContentLoaded", function () {
         document.body.innerHTML = `
             <div style="display:flex; justify-content:center; align-items:center; height:100vh; background:#f0f2f5; font-family:sans-serif;">
                 <div style="text-align:center; padding:30px; background:white; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
                     <h2 style="color:#e74a3b;">Akses Ditolak!</h2>
-                    <p style="color:#858796;">Link sekolah tidak valid atau tidak ditemukan.</p>
+                    <p style="color:#858796;">Link sekolah tidak valid atau URL backend belum ditentukan.</p>
                 </div>
             </div>`;
     });
-    // Hentikan eksekusi script selanjutnya
-    throw new Error("Tenant ID tidak valid atau tidak ditemukan di URL.");
+    throw new Error("Tenant ID atau Backend URL tidak ditemukan.");
 }
 
 // ==========================================
