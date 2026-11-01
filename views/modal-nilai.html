@@ -1,0 +1,185 @@
+    <div class="modal fade" id="mdlTranskrip" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable modal-transkrip-custom">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header text-white py-3 px-4" style="background: linear-gradient(135deg, #1f3a60 0%, #2e59d9 100%);">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-table fs-4"></i>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0">Transkrip Nilai Siswa (Leger Komprehensif)</h5>
+                            <small id="lblSubTranskrip" class="text-white-50">Capaian Kompetensi Semester 1 – 6 (Pengetahuan, Keterampilan & Sikap)</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3 p-md-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom gap-2">
+                        <div>
+                            <span class="text-muted small text-uppercase fw-bold">Siswa:</span>
+                            <h5 id="tNamaSiswa" class="fw-bold text-primary mb-0 d-inline-block ms-1"></h5>
+                            <input type="hidden" id="tNis">
+                            <input type="hidden" id="tNisn">
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <div class="btn-group btn-group-sm shadow-sm" role="group" aria-label="Navigasi Semester">
+                                <button type="button" class="btn btn-outline-primary fw-semibold" onclick="scrollTranskripTable('left')" title="Geser ke Semester 1 - 3">
+                                    <i class="bi bi-arrow-left me-1"></i> Smt 1-3
+                                </button>
+                                <button type="button" class="btn btn-outline-primary fw-semibold" onclick="scrollTranskripTable('right')" title="Geser ke Semester 4 - 6">
+                                    Smt 4-6 <i class="bi bi-arrow-right ms-1"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap justify-content-between align-items-center text-muted small mb-2 px-1 gap-2">
+                        <span><i class="bi bi-arrow-left-right text-primary me-1"></i> <b>Petunjuk:</b> Geser tabel ke kanan & kiri untuk melihat seluruh semester. Kolom <b>Mata Pelajaran</b> tetap terkunci di sisi kiri.</span>
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="badge shadow-sm" style="background-color: #1e40af; color: #ffffff; font-size: 0.75rem;">P : Pengetahuan</span>
+                            <span class="badge shadow-sm" style="background-color: #166534; color: #ffffff; font-size: 0.75rem;">K : Keterampilan</span>
+                            <span class="badge shadow-sm" style="background-color: #9a3412; color: #ffffff; font-size: 0.75rem;">S : Sikap</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 p-3 bg-light border rounded hidden" id="boxAnalisisAI">
+                        <h6 class="fw-bold text-primary"><i class="bi bi-robot me-1"></i> Analisis AI</h6>
+                        <div id="hasilAnalisisAI" class="small text-secondary">Sedang memproses...</div>
+                    </div>
+
+                    <div class="table-responsive transkrip-scroll-container">
+                        <!-- Tabel dinamis semester 1 - 6 akan di-render di sini oleh JavaScript -->
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2 px-4 justify-content-between">
+                    <button class="btn btn-sm btn-warning fw-bold text-dark shadow-sm" onclick="mintaAnalisisAI()">
+                        <i class="bi bi-robot me-1"></i> Minta Analisis Nilai AI
+                    </button>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-danger fw-bold shadow-sm" onclick="cetakTranskrip()">
+                            <i class="bi bi-file-pdf me-1"></i> Cetak PDF
+                        </button>
+                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle me-1"></i> Tutup
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="mdlMapel">
+        <div class="modal-dialog" style="margin-top: 8vh;">
+            <div class="modal-content">
+                <form id="formMapel" onsubmit="saveMapel(event)">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="lblModalMapel">Data Mata Pelajaran</h5>
+                    </div>
+                    <div class="modal-body"><input type="hidden" id="oldIdMapel">
+                        <div class="mb-3"><label class="fw-bold small">Kode Mapel</label><input id="idMapel"
+                                class="form-control" required></div>
+                        <div class="mb-3"><label class="fw-bold small">Nama Mapel</label><input id="nmMapel"
+                                class="form-control" required></div>
+                    </div>
+                    <div class="modal-footer"><button type="button" class="btn btn-secondary fw-bold px-4" data-bs-dismiss="modal">TUTUP</button><button type="submit" class="btn btn-primary fw-bold px-4">SIMPAN</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="mdlInputNilai" data-bs-backdrop="static" tabindex="-1" style="z-index: 1060;">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-journal-check"></i> Input Nilai Siswa</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 bg-light">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 id="lblNamaSiswaNilai" class="fw-bold text-dark m-0">Nama Siswa</h5>
+                        <input type="hidden" id="hdnNisNilai">
+                    </div>
+
+                    <div class="card p-3 shadow-sm border-0 mb-3 border-start border-success border-4">
+                        <label class="fw-bold small mb-2 text-muted">Pilih Semester:</label>
+                        <select id="selSemesterModal" class="form-select border-success fw-bold"
+                            onchange="loadNilaiSiswaModal()">
+                            <option value="1">Semester 1</option>
+                            <option value="2">Semester 2</option>
+                            <option value="3">Semester 3</option>
+                            <option value="4">Semester 4</option>
+                            <option value="5">Semester 5</option>
+                            <option value="6">Semester 6</option>
+                            <option value="7">Semester 7</option>
+                            <option value="8">Semester 8</option>
+                            <option value="9">Semester 9</option>
+                            <option value="10">Semester 10</option>
+                            <option value="11">Semester 11</option>
+                            <option value="12">Semester 12</option>
+                        </select>
+                    </div>
+
+                    <div class="table-responsive bg-white p-0 rounded shadow-sm border">
+                        <table class="table table-bordered text-center align-middle m-0">
+                            <thead class="table-success">
+                                <tr>
+                                    <th width="30%">Mata Pelajaran</th>
+                                    <th>Pengetahuan</th>
+                                    <th>Keterampilan</th>
+                                    <th>Sikap</th>
+                                    <th>Deskripsi (Opsional)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyNilaiModal"></tbody>
+                            <tfoot class="bg-light fw-bold">
+                                <tr>
+                                    <td class="text-end">TOTAL:</td>
+                                    <td id="footPModal" class="text-primary">0</td>
+                                    <td id="footKModal" class="text-primary">0</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-end">RATA-RATA:</td>
+                                    <td id="avgPModal" class="text-success">0</td>
+                                    <td id="avgKModal" class="text-success">0</td>
+                                    <td>-</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white d-flex justify-content-between">
+                    <div>
+                        <button type="button" class="btn btn-info fw-bold text-white shadow-sm"
+                            onclick="showImportNilaiPopup($('#hdnNisNilai').val())"><i class="bi bi-upload"></i> Import
+                            Nilai</button>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Tutup</button>
+                        <button type="button" class="btn btn-success fw-bold px-4 shadow-sm"
+                            onclick="simpanNilaiModal()">SIMPAN NILAI</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Import Mapel -->
+    <div class="modal fade" id="mdlImportMapel" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-excel me-1"></i> Import Mapel Excel</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <p class="text-muted small">Upload file Excel (.xlsx / .xls) sesuai dengan template.</p>
+                    <a href="javascript:void(0)" onclick="downloadTemplateMapel()" class="btn btn-outline-info btn-sm fw-bold mb-3"><i class="bi bi-file-earmark-excel me-1"></i> Unduh Template Excel (.xlsx)</a>
+                    <input type="file" id="fileImportMapel" class="form-control" accept=".xlsx, .xls, .csv">
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-info fw-bold text-white px-4" onclick="prosesImportMapel()"><i class="bi bi-upload me-1"></i> Mulai Import</button>
+                </div>
+            </div>
+        </div>
+    </div>
