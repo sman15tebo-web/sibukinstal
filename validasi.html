@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verifikasi & Validasi Lembar Buku Induk Siswa</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="./icon.png">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" onerror="this.onerror=null;this.href='./plugins/css/bootstrap.min.css';">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet" onerror="this.onerror=null;this.href='./plugins/css/bootstrap-icons.css';">
+    <style>
+        :root {
+            --primary-color: #1e3a8a;
+            --accent-color: #059669;
+            --bg-page: #f1f5f9;
+        }
+        body {
+            background-color: var(--bg-page);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #1e293b;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .cert-header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #2563eb 100%);
+            color: white;
+            padding: 2.2rem 1rem 1.8rem 1rem;
+            text-align: center;
+            border-bottom: 4px solid #10b981;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+        }
+        .validation-branding {
+            display: grid;
+            grid-template-columns: 64px minmax(0, 1fr) 64px;
+            align-items: center;
+            gap: 1rem;
+        }
+        .school-logo {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+            justify-self: center;
+        }
+        .school-logo-instansi { grid-column: 1; grid-row: 1; justify-self: start; }
+        .school-logo-sekolah { grid-column: 3; grid-row: 1; justify-self: end; }
+        .validation-branding-names { grid-column: 2; grid-row: 1; }
+        @media (max-width: 575.98px) {
+            .validation-branding {
+                grid-template-columns: 1fr 1fr;
+                gap: 0.6rem 1rem;
+            }
+            .school-logo {
+                width: 54px;
+                height: 54px;
+            }
+            .school-logo-instansi,
+            .school-logo-sekolah { grid-row: 1; justify-self: center; }
+            .school-logo-instansi { grid-column: 1; }
+            .school-logo-sekolah { grid-column: 2; }
+            .validation-branding-names {
+                grid-column: 1 / -1;
+                grid-row: 2;
+            }
+            .cert-header { padding-top: 1.5rem; }
+        }
+        .main-card {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+            margin-top: -1.5rem;
+            margin-bottom: 2rem;
+        }
+        .badge-verified {
+            background-color: #dcfce7;
+            color: #15803d;
+            border: 1.5px solid #86efac;
+            font-size: 0.95rem;
+            padding: 0.6rem 1.2rem;
+            border-radius: 50px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(22, 163, 74, 0.12);
+        }
+        .student-photo-box {
+            width: 130px;
+            height: 173px;
+            border-radius: 10px;
+            border: 2px solid #cbd5e1;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            object-fit: cover;
+            background: #f8fafc;
+        }
+        .student-photo-placeholder {
+            width: 130px;
+            height: 173px;
+            border-radius: 10px;
+            border: 2px dashed #cbd5e1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            font-size: 0.78rem;
+            text-align: center;
+            padding: 8px;
+            background: #f8fafc;
+        }
+        .data-table th, .data-table td {
+            padding: 0.65rem 0.6rem;
+            vertical-align: middle;
+            font-size: 0.93rem;
+        }
+        .data-table th {
+            color: #64748b;
+            font-weight: 600;
+            width: 36%;
+        }
+        .data-table td {
+            color: #0f172a;
+            font-weight: 500;
+        }
+        .tte-card {
+            background: #f0fdf4;
+            border: 1.5px dashed #86efac;
+            border-radius: 12px;
+            padding: 1.1rem;
+            position: relative;
+        }
+        .code-pill {
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            background: #e2e8f0;
+            color: #0f172a;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            display: inline-block;
+        }
+        .footer-note {
+            font-size: 0.78rem;
+            color: #64748b;
+            line-height: 1.4;
+        }
+        @media print {
+            body { background: #fff !important; }
+            .no-print { display: none !important; }
+            .main-card { margin-top: 0 !important; box-shadow: none !important; border: 1px solid #ccc !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Instansi & Sekolah -->
+    <header class="cert-header">
+        <div class="container" style="max-width: 680px;">
+            <div class="validation-branding mb-2">
+                <img id="logoInstansi" class="school-logo school-logo-instansi" alt="Logo Instansi" style="display:none;">
+                <div class="text-center validation-branding-names">
+                    <div class="small text-white-50 text-uppercase fw-bold letter-spacing-1" id="lblInstansi" style="letter-spacing: 1px;"></div>
+                    <h5 class="fw-bold mb-0 text-white text-uppercase" id="lblSekolah"></h5>
+                </div>
+                <img id="logoSekolah" class="school-logo school-logo-sekolah" alt="Logo Sekolah" style="display:none;">
+            </div>
+            <div class="small text-white-50 mt-1" id="lblSlogan">Verifikasi Keaslian & Integritas Lembar Dokumen Buku Induk Siswa</div>
+        </div>
+    </header>
+
+    <!-- Konten Utama -->
+    <main class="container flex-grow-1" style="max-width: 680px;">
+        <div class="main-card p-3 p-md-4">
+
+            <!-- Status Validasi -->
+            <div class="text-center mb-4">
+                <div class="badge-verified mb-2">
+                    <i class="bi bi-shield-fill-check fs-5"></i>
+                    <span>DOKUMEN RESMI TERVERIFIKASI</span>
+                </div>
+                <div class="small text-muted">
+                    Data siswa tercatat sah dan valid di dalam <b>Buku Induk Siswa Resmi Sekolah</b>.
+                </div>
+            </div>
+
+            <!-- Kartu Siswa & Foto -->
+            <div class="row g-3 align-items-center justify-content-center mb-4 pb-3 border-bottom">
+                <div class="col-auto text-center">
+                    <img id="imgFotoSiswa" class="student-photo-box d-none" alt="Foto Siswa">
+                    <div id="placeholderFoto" class="student-photo-placeholder">
+                        <i class="bi bi-person-fill fs-1 mb-1"></i>
+                        <span>Foto Siswa</span>
+                    </div>
+                </div>
+                <div class="col-12 col-sm text-center text-sm-start">
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary fw-bold px-2 py-1 mb-1" id="badgeStatusSiswa">Siswa Aktif</span>
+                    <h4 class="fw-bold text-dark mb-1" id="valNama">-</h4>
+                    <div class="text-muted small">
+                        NIS: <b class="text-dark" id="valNis">-</b> &bull; NISN: <b class="text-dark" id="valNisn">-</b>
+                    </div>
+                    <div class="mt-2 text-secondary small" id="valSubInfo">
+                        <i class="bi bi-mortarboard me-1 text-primary"></i><span id="valKelasStatus">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabel Detail Data Sesuai Permintaan -->
+            <div class="table-responsive mb-4">
+                <table class="table data-table table-striped table-bordered mb-0 rounded overflow-hidden">
+                    <tbody>
+                        <tr>
+                            <th><i class="bi bi-person-vcard text-primary me-2"></i>Nama Lengkap</th>
+                            <td class="fw-bold" id="tblNama">-</td>
+                        </tr>
+                        <tr>
+                            <th><i class="bi bi-hash text-primary me-2"></i>NIS / NISN</th>
+                            <td><span id="tblNis" class="fw-bold">-</span> / <span id="tblNisn" class="fw-bold text-primary">-</span></td>
+                        </tr>
+                        <tr>
+                            <th><i class="bi bi-gender-ambiguous text-primary me-2"></i>Jenis Kelamin</th>
+                            <td id="tblJk">-</td>
+                        </tr>
+                        <tr>
+                            <th><i class="bi bi-calendar-event text-primary me-2"></i>Tanggal Lahir</th>
+                            <td id="tblTtl">-</td>
+                        </tr>
+                        <tr>
+                            <th><i class="bi bi-door-open text-primary me-2"></i>Kelas / Thn Lulus</th>
+                            <td class="fw-bold text-success" id="tblKelas">-</td>
+                        </tr>
+                        <tr>
+                            <th><i class="bi bi-person-hearts text-primary me-2"></i>Nama Ayah</th>
+                            <td class="fw-bold" id="tblAyah">-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Kotak Penandatanganan Elektronik (TTE) -->
+            <div class="tte-card mb-4">
+                <div class="d-flex align-items-start gap-2 mb-2">
+                    <i class="bi bi-patch-check-fill text-success fs-4"></i>
+                    <div>
+                        <div class="fw-bold text-dark" style="font-size: 0.95rem;">Tanda Tangan Elektronik (TTE) Sah</div>
+                        <div class="small text-muted" style="font-size: 0.8rem;" id="tteDescription"></div>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pt-1">
+                    <div class="small text-muted" style="font-size: 0.78rem;">
+                        Kode Unik Integrasi TTE:
+                    </div>
+                    <div class="code-pill" id="valTteCode">TTE-00000000</div>
+                </div>
+            </div>
+
+            <!-- Tombol Aksi -->
+            <div class="d-flex gap-2 flex-wrap no-print">
+                <button class="btn btn-outline-primary btn-sm flex-fill fw-bold shadow-sm" onclick="window.print()">
+                    <i class="bi bi-printer me-1"></i> Cetak Bukti Validasi
+                </button>
+                <button class="btn btn-primary btn-sm flex-fill fw-bold shadow-sm" onclick="salinTautanValidasi()">
+                    <i class="bi bi-share me-1"></i> Bagikan Tautan
+                </button>
+            </div>
+
+            <div class="text-center mt-3 pt-3 border-top footer-note">
+                Sistem Buku Induk Siswa Digital (SiBuk InSTal) &bull; Dokumen ini dihasilkan secara otomatis oleh sistem informasi sekolah dan dinyatakan sah menurut peraturan yang berlaku.
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        function clean(val, fallback = '-') {
+            if (val === null || val === undefined) return fallback;
+            const s = String(val).trim();
+            return (s && s !== 'null' && s !== 'undefined') ? s : fallback;
+        }
+
+        function salinTautanValidasi() {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(window.location.href).then(() => {
+                    alert('Tautan verifikasi berhasil disalin!');
+                }).catch(() => {
+                    prompt('Salin tautan verifikasi ini:', window.location.href);
+                });
+            } else {
+                prompt('Salin tautan verifikasi ini:', window.location.href);
+            }
+        }
+
+        const tenantConfig = {
+            "demo": "https://script.google.com/macros/s/AKfycbyfNXMoC89bUeloyLiJMmN34pCKZFIYC-cF-zA4IP1eqTKZj8GzuiSI3lLhM5fYPS_7/exec",
+            "sman15tebo": "https://script.google.com/macros/s/AKfycbwIBecBNAosHeM88N8tzdKxMFZFr7wN89Wfb1fB6B-6sZ2AJ_C2VQncJV1lmsLo72qQ/exec",
+            "smkn1kotaternate": "https://script.google.com/macros/s/AKfycbypfnJFHWwdwRwigATVcTKO67PbJYO5MtfeqFPDZKiPNjC0SmCH31VF3LFajev1R3Gd/exec",
+            "sman1tebo": "https://script.google.com/macros/s/AKfycbwzNOc-i5QlZwYOEtC9SwHFKo4fQsOiZohQdKT02UxQGYNUv3nYt1Kvv2NfcQDMex5ESw/exec",
+            "sman2tebo": "https://script.google.com/macros/s/AKfycbyAD3I6tjiBq6vjZx_GcdCKP1m5yWAkdNcVZ5cYuRo2SMUsJz6qtU6kTvvbPlVY9eMs/exec",
+            "sman5tebo": "https://script.google.com/macros/s/AKfycbwB_-EO-r-d6NlIKzGaJrjK-vtgaOTsRxGuppu3m1cFb53z1RShsV8ZUQ2ovikr2_qgrw/exec",
+            "sman17tebo": "https://script.google.com/macros/s/AKfycbwX51-G3e3Mvy-SUxElwJTSTgyPitdLH84GRLyxuCe0xWXmh_uQVEnX6ereTyiCwl4GKQ/exec",
+            "sman19tebo": "https://script.google.com/macros/s/AKfycbx6YkigF-4fDvb5G_gD7Rq1kS08peRgXHp9Poh1_q2-y-aqrEIQxYQz9Nmf31ZXFIca/exec",
+            "smkn1tebo": "https://script.google.com/macros/s/AKfycbw6WMBov4YsHwELoIZyZxZBYwFWhE_wkWPQXGylsCNrU03QtwXPqsl-UERszhZBkeRY/exec",
+            "smkn2tebo": "https://script.google.com/macros/s/AKfycbz5dJIjry3slK-tEt1VU5APjGi2mSacXovWdXq_e7Fww1DXyswL6cbC8RbaRhKdj461/exec",
+            "slbntebo": "https://script.google.com/macros/s/AKfycbyqbdj7AnTv7ft_DaWwRZuDQMjkt7Yekvs7O8wwqghu5hCLYwMGwng7TgG5SknXzKcuYQ/exec"
+        };
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('d');
+            const code = urlParams.get('code') || 'TTE-VALID';
+            const rawNis = urlParams.get('nis');
+            const rawNisn = urlParams.get('nisn');
+            const rawTgl = urlParams.get('tgl') || '';
+            const tenantId = (urlParams.get('id') || 'sman15tebo').trim().toLowerCase();
+
+            let data = null;
+
+            if (token) {
+                try {
+                    const jsonStr = decodeURIComponent(escape(atob(token)));
+                    data = JSON.parse(jsonStr);
+                } catch (e) {
+                    try {
+                        data = JSON.parse(atob(token));
+                    } catch (_) {}
+                }
+            }
+
+            if (!data) {
+                data = {
+                    nis: rawNis || '-',
+                    nisn: rawNisn || '-',
+                    nama: urlParams.get('nama') || 'Memuat data siswa...',
+                    jk: urlParams.get('jk') || '-',
+                    ttl: rawTgl || urlParams.get('ttl') || '-',
+                    kls: urlParams.get('kls') || '-',
+                    thnLulus: urlParams.get('thnLulus') || urlParams.get('thn') || '',
+                    status: urlParams.get('st') || urlParams.get('status') || 'Aktif',
+                    ayah: urlParams.get('ayah') || '-',
+                    code: code,
+                    sekolah: urlParams.get('sekolah') || '',
+                    instansi: urlParams.get('instansi') || '',
+                    kepsek: urlParams.get('kepsek') || 'Kepala Sekolah',
+                    nip: urlParams.get('nip') || 'NIP. -',
+                    foto: urlParams.get('foto') || ''
+                };
+            }
+
+            // Render Header
+            let namaSekolah = clean(urlParams.get('sekolah') || data.sekolah, '');
+            let namaInstansi = clean(urlParams.get('instansi') || data.instansi, '');
+            if (namaSekolah) {
+                document.getElementById('lblSekolah').textContent = namaSekolah;
+                document.getElementById('tteDescription').textContent =
+                    `Dokumen lembar buku induk ini ditandatangani secara digital oleh Kepala Sekolah ${namaSekolah}.`;
+            } else {
+                document.getElementById('lblSekolah').textContent = 'Sekolah';
+                document.getElementById('tteDescription').textContent =
+                    'Dokumen lembar buku induk ini ditandatangani secara digital oleh Kepala Sekolah sekolah penerbit.';
+            }
+            if (namaInstansi) document.getElementById('lblInstansi').textContent = namaInstansi;
+
+            // Render Profil Siswa
+            const nama = clean(data.nama, 'Nama Siswa');
+            const nis = clean(data.nis, '-');
+            const nisn = clean(data.nisn, '-');
+            const jk = clean(data.jk, '-');
+            const ttl = clean(data.ttl, '-');
+            const ayah = clean(data.ayah, '-');
+            const isAlumni = String(data.status || '').toLowerCase() === 'lulus';
+
+            document.getElementById('valNama').textContent = nama;
+            document.getElementById('tblNama').textContent = nama;
+            document.getElementById('valNis').textContent = nis;
+            document.getElementById('tblNis').textContent = nis;
+            document.getElementById('valNisn').textContent = nisn;
+            document.getElementById('tblNisn').textContent = nisn;
+            document.getElementById('tblJk').textContent = jk;
+            document.getElementById('tblTtl').textContent = ttl;
+            document.getElementById('tblAyah').textContent = ayah;
+
+            const kelasLabel = isAlumni
+                ? (data.thnLulus ? `Alumni (Lulus Tahun ${data.thnLulus})` : 'Alumni (Lulus)')
+                : (data.kls && data.kls !== '-' ? `Kelas Saat Ini: ${data.kls}` : 'Siswa Aktif');
+
+            document.getElementById('valKelasStatus').textContent = kelasLabel;
+            document.getElementById('tblKelas').textContent = isAlumni ? `Alumni (Lulus ${data.thnLulus || ''})` : `Kelas ${data.kls || '-'}`;
+
+            const badgeStatus = document.getElementById('badgeStatusSiswa');
+            if (isAlumni) {
+                badgeStatus.className = 'badge bg-success text-white px-2 py-1 mb-1';
+                badgeStatus.textContent = 'Alumni / Lulus';
+            } else {
+                badgeStatus.className = 'badge bg-primary text-white px-2 py-1 mb-1';
+                badgeStatus.textContent = 'Siswa Aktif';
+            }
+
+            // PENCARIAN DATA LENGKAP SECARA LIVE DARI DATABASE SEKOLAH (ONLINE / MULTI-TENANT)
+            const targetApi = urlParams.get('api') || tenantConfig[tenantId];
+            if (targetApi) {
+                fetch(targetApi, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'getSettings', data: {} })
+                })
+                .then(r => {
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                    return r.json();
+                })
+                .then(settings => {
+                    if (!settings || typeof settings !== 'object') {
+                        throw new Error('Respons pengaturan sekolah tidak valid.');
+                    }
+                    if (settings.nama_sekolah) {
+                        namaSekolah = settings.nama_sekolah;
+                        document.getElementById('lblSekolah').textContent = settings.nama_sekolah;
+                        document.getElementById('tteDescription').textContent =
+                            `Dokumen lembar buku induk ini ditandatangani secara digital oleh Kepala Sekolah ${settings.nama_sekolah}.`;
+                    }
+                    if (settings.nama_instansi) {
+                        namaInstansi = settings.nama_instansi;
+                        document.getElementById('lblInstansi').textContent = settings.nama_instansi;
+                    }
+                    const loadLogo = (elementId, configuredLogo) => {
+                        if (!configuredLogo) return Promise.resolve();
+                        const logoValue = String(configuredLogo);
+                        const imagePromise = logoValue.startsWith('data:image') || /^https?:\/\//i.test(logoValue)
+                            ? Promise.resolve(logoValue)
+                            : fetch(targetApi, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'text/plain' },
+                                body: JSON.stringify({ action: 'getImage', data: { id: logoValue } })
+                            }).then(r => {
+                                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                                return r.json();
+                            });
+                        return imagePromise.then(source => {
+                            if (typeof source !== 'string' || !/^(data:image\/|https?:\/\/)/i.test(source)) {
+                                throw new Error(`Format logo ${elementId} tidak valid.`);
+                            }
+                            const image = document.getElementById(elementId);
+                            image.onload = () => { image.style.display = 'block'; };
+                            image.onerror = () => { image.style.display = 'none'; };
+                            image.src = source;
+                            if (image.complete && image.naturalWidth) image.style.display = 'block';
+                        });
+                    };
+                    return Promise.all([
+                        loadLogo('logoInstansi', settings.logo_instansi),
+                        loadLogo('logoSekolah', settings.logo_sekolah)
+                    ]);
+                })
+                .catch(error => console.warn('[Validasi] Gagal memuat identitas/logo sekolah:', error));
+            }
+            if (targetApi && (rawNisn || rawNis)) {
+                fetch(targetApi, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: 'cekValidasiSiswa', data: { nisn: rawNisn || rawNis } })
+                })
+                .then(r => r.json())
+                .then(res => {
+                    if (res && res.status === 'success' && res.data) {
+                        const d = res.data;
+                        if (d.nama) {
+                            document.getElementById('valNama').textContent = d.nama;
+                            document.getElementById('tblNama').textContent = d.nama;
+                        }
+                        if (d.jk) {
+                            const jkText = (d.jk === 'L' || d.jk === 'Laki-laki') ? 'Laki-laki' : 'Perempuan';
+                            document.getElementById('tblJk').textContent = jkText;
+                        }
+                        if (d.tmplahir || d.tgllahir_indo) {
+                            document.getElementById('tblTtl').textContent = (d.tmplahir && d.tgllahir_indo) ? `${d.tmplahir}, ${d.tgllahir_indo}` : (d.tgllahir_indo || d.tmplahir);
+                        }
+                        if (d.ayah) document.getElementById('tblAyah').textContent = d.ayah;
+                        if (d.kls) {
+                            document.getElementById('tblKelas').textContent = d.kls;
+                            document.getElementById('valKelasStatus').textContent = 'Kelas Saat Ini: ' + d.kls;
+                        }
+                        if (d.status) {
+                            const isAl = String(d.status).toLowerCase() === 'lulus';
+                            const b = document.getElementById('badgeStatusSiswa');
+                            b.className = isAl ? 'badge bg-success text-white px-2 py-1 mb-1' : 'badge bg-primary text-white px-2 py-1 mb-1';
+                            b.textContent = isAl ? 'Alumni / Lulus' : 'Siswa Aktif';
+                        }
+                        const fotoId = d.foto_keluar || d.foto_id;
+                        if (fotoId) {
+                            const img = document.getElementById('imgFotoSiswa');
+                            const ph = document.getElementById('placeholderFoto');
+                            img.src = `https://lh3.googleusercontent.com/d/${fotoId}`;
+                            img.classList.remove('d-none');
+                            ph.classList.add('d-none');
+                        }
+                    }
+                }).catch(() => {
+                    // Jika offline / fetch gagal, data pokok NIS, NISN, Tgl Lahir, dan Kode TTE tetap tampil sah
+                    if (data.nama === 'Memuat data siswa...') {
+                        document.getElementById('valNama').textContent = 'Siswa Terdaftar (Buku Induk)';
+                        document.getElementById('tblNama').textContent = 'Siswa Terdaftar (Buku Induk)';
+                    }
+                });
+            }
+
+            // TTE Box
+            document.getElementById('valTteCode').textContent = clean(data.code || code, 'TTE-VALID');
+
+            // Render Foto (jika ada data URL, Drive ID, atau link gambar eksternal)
+            const foto = data.foto || data.fotoKeluar || data.fotoId;
+            const imgEl = document.getElementById('imgFotoSiswa');
+            const placeholderEl = document.getElementById('placeholderFoto');
+
+            if (foto && typeof foto === 'string' && foto.trim()) {
+                const trimmed = foto.trim();
+                if (trimmed.startsWith('data:image') || trimmed.startsWith('http')) {
+                    imgEl.src = trimmed;
+                    imgEl.classList.remove('d-none');
+                    placeholderEl.classList.add('d-none');
+                } else if (/^[A-Za-z0-9_-]{20,}$/.test(trimmed)) {
+                    imgEl.src = 'https://lh3.googleusercontent.com/d/' + trimmed;
+                    imgEl.classList.remove('d-none');
+                    placeholderEl.classList.add('d-none');
+                } else {
+                    placeholderEl.classList.remove('d-none');
+                    imgEl.classList.add('d-none');
+                }
+            } else {
+                placeholderEl.classList.remove('d-none');
+                imgEl.classList.add('d-none');
+            }
+        });
+    </script>
+</body>
+</html>
